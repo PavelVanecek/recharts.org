@@ -3,12 +3,16 @@ import Locale from '../locale';
 
 export const localeGet = (locale, component, path) => _.get(Locale, `${locale}.${component}.${path}`);
 
+const defaultLocale = 'en-US';
+
 export const getLocaleType = (props) => {
   const pathname = (props && props.location && props.location.pathname) || '/';
   const routes = pathname.split('/');
-  const locale = routes && routes.length >= 2 ? routes[1] : 'en-US';
-
-  return locale;
+  if (routes.length < 2) {
+    return defaultLocale;
+  }
+  const availableLocales = Object.keys(Locale);
+  return routes.find((route) => availableLocales.includes(route)) || defaultLocale;
 };
 
 export const parseLocalObj = (locale, value) => {
