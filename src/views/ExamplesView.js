@@ -46,6 +46,8 @@ class ExamplesView extends PureComponent {
 
   editorRef = React.createRef(null);
 
+  errorRetryAttempts = 0;
+
   static getDerivedStateFromProps(nextProps, prevState) {
     const { match } = nextProps;
     const page = match?.params?.name;
@@ -69,11 +71,9 @@ class ExamplesView extends PureComponent {
 
   componentDidUpdate(prevProps, prevState) {
     const page = this.getPage();
-
     if (prevState.prevPage !== page) {
       // page change
       const exampleResult = parseExampleComponent(page);
-      console.log(page);
 
       if (exampleResult) {
         this.fetchExampleCode(exampleResult.cateName, exampleResult.exampleName);
@@ -82,6 +82,21 @@ class ExamplesView extends PureComponent {
   }
 
   fetchExampleCode = (cateName, exampleName) => {
+    /*
+     * This class is structured such that an error in fetching the code will send it to
+     * an infinite loop of retries, which will eventually either crash your browser or
+     * get you banned from GitHub.
+     * So let's limit the number of retries to something reasonable.
+     */
+    if (this.errorRetryAttempts > 3) {
+      this.setState({
+        isLoading: false,
+        hasError: true,
+        exampleCode: null,
+      });
+      return;
+    }
+
     // read code from cache
     if (EXAMPLE_CODE_CACHE[exampleName]) {
       this.setState({
@@ -109,6 +124,7 @@ class ExamplesView extends PureComponent {
         });
       },
       () => {
+        this.errorRetryAttempts++;
         this.setState({
           isLoading: false,
           hasError: true,
